@@ -1,0 +1,6 @@
+{
+  "name": "Isaya Sushi",
+  "description": "App interactiva para Isaya Sushi con vistas conectadas de Cliente y Administrador (Partner) con sincronización de pedidos y menú.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
