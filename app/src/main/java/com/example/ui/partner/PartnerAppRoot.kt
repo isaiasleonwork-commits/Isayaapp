@@ -45,7 +45,6 @@ enum class PartnerSectionTab {
 @Composable
 fun PartnerAppRoot(
     repository: IsayaRepository,
-    onSwitchToClient: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -78,8 +77,7 @@ fun PartnerAppRoot(
         PartnerAuthLoginScreen(
             onLoginSubmit = { email, password, onResult ->
                 repository.loginPartner(email, password, onResult)
-            },
-            onSwitchToClient = onSwitchToClient
+            }
         )
         return
     }
@@ -93,9 +91,10 @@ fun PartnerAppRoot(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(DarkSurface)
-                    .border(0.5.dp, DarkBorder)
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .background(GradientSushiHeader)
+                    .statusBarsPadding()
+                    .border(1.dp, DarkBorder)
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 10.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -108,17 +107,17 @@ fun PartnerAppRoot(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(38.dp)
                                 .clip(CircleShape)
-                                .background(SushiRed.copy(alpha = 0.2f))
-                                .border(1.dp, SushiRed, CircleShape),
+                                .background(SushiRed.copy(alpha = 0.25f))
+                                .border(1.5.dp, SushiRed, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Restaurant,
                                 contentDescription = null,
                                 tint = SushiRedLight,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                         Column {
@@ -134,15 +133,16 @@ fun PartnerAppRoot(
                                     letterSpacing = 1.sp
                                 )
                                 Surface(
-                                    color = if (settings.isOpen) StatusGreen.copy(alpha = 0.2f) else SushiRed.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(4.dp)
+                                    color = if (settings.isOpen) StatusGreen.copy(alpha = 0.25f) else SushiRed.copy(alpha = 0.25f),
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (settings.isOpen) StatusGreen else SushiRed)
                                 ) {
                                     Text(
-                                        text = if (settings.isOpen) "ABIERTO" else "CERRADO",
+                                        text = if (settings.isOpen) "● EN VIVO" else "● CERRADO",
                                         color = if (settings.isOpen) StatusGreen else SushiRedLight,
                                         fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                        fontWeight = FontWeight.ExtraBold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
@@ -156,35 +156,24 @@ fun PartnerAppRoot(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Switch to Client App
-                        OutlinedButton(
-                            onClick = onSwitchToClient,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                            modifier = Modifier.height(32.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = GoldPrimary),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(text = "🍣 Clientes", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
                         // Sound alert test button
                         IconButton(
                             onClick = {
                                 SoundAlertHelper.playNewOrderAlert(context)
                             },
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(34.dp)
                                 .clip(CircleShape)
                                 .background(DarkCardElevated)
+                                .border(1.dp, GoldPrimary.copy(alpha = 0.5f), CircleShape)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.VolumeUp,
                                 contentDescription = "Probar alerta sonora",
                                 tint = GoldPrimary,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(17.dp)
                             )
                         }
 
@@ -194,16 +183,17 @@ fun PartnerAppRoot(
                                 repository.logoutPartner()
                             },
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(34.dp)
                                 .clip(CircleShape)
                                 .background(DarkCardElevated)
+                                .border(1.dp, DarkBorder, CircleShape)
                                 .testTag("partner_logout_button")
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Logout,
                                 contentDescription = "Cerrar sesión",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(16.dp)
+                                tint = SushiRedLight,
+                                modifier = Modifier.size(17.dp)
                             )
                         }
                     }
@@ -216,109 +206,119 @@ fun PartnerAppRoot(
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                 exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
             ) {
-                NavigationBar(
-                    containerColor = DarkSurface,
-                    contentColor = TextPrimary,
-                    tonalElevation = 8.dp,
-                    modifier = Modifier.height(64.dp)
+                Surface(
+                    color = DarkSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
                 ) {
-                    // Tab 1: Kitchen Orders
-                    NavigationBarItem(
-                        selected = activeTab == PartnerSectionTab.KITCHEN_ORDERS,
-                        onClick = { activeTab = PartnerSectionTab.KITCHEN_ORDERS },
-                        icon = {
-                            BadgedBox(
-                                badge = {
-                                    if (pendingCount > 0) {
-                                        Badge(containerColor = SushiRed) {
-                                            Text("$pendingCount", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                    NavigationBar(
+                        containerColor = DarkSurface,
+                        contentColor = TextPrimary,
+                        tonalElevation = 4.dp,
+                        modifier = Modifier
+                            .navigationBarsPadding()
+                            .height(64.dp)
+                    ) {
+                        // Tab 1: Kitchen Orders
+                        NavigationBarItem(
+                            selected = activeTab == PartnerSectionTab.KITCHEN_ORDERS,
+                            onClick = { activeTab = PartnerSectionTab.KITCHEN_ORDERS },
+                            icon = {
+                                BadgedBox(
+                                    badge = {
+                                        if (pendingCount > 0) {
+                                            Badge(
+                                                containerColor = SushiRed,
+                                                contentColor = Color.White
+                                            ) {
+                                                Text("$pendingCount", fontWeight = FontWeight.Black, fontSize = 10.sp)
+                                            }
                                         }
                                     }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ReceiptLong,
+                                        contentDescription = "Pedidos",
+                                        modifier = Modifier.size(22.dp)
+                                    )
                                 }
-                            ) {
+                            },
+                            label = { Text("Pedidos", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = DeepBlack,
+                                selectedTextColor = GoldPrimary,
+                                indicatorColor = GoldPrimary,
+                                unselectedIconColor = TextSecondary,
+                                unselectedTextColor = TextSecondary
+                            ),
+                            modifier = Modifier.testTag("partner_tab_kitchen")
+                        )
+
+                        // Tab 2: Menu Stock & CMS Manager
+                        NavigationBarItem(
+                            selected = activeTab == PartnerSectionTab.MENU_CMS,
+                            onClick = { activeTab = PartnerSectionTab.MENU_CMS },
+                            icon = {
                                 Icon(
-                                    imageVector = Icons.Default.ReceiptLong,
-                                    contentDescription = "Cocina",
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = Icons.Default.RestaurantMenu,
+                                    contentDescription = "Menú",
+                                    modifier = Modifier.size(22.dp)
                                 )
-                            }
-                        },
-                        label = { Text("Pedidos", fontSize = 10.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = DeepBlack,
-                            selectedTextColor = GoldPrimary,
-                            indicatorColor = GoldPrimary,
-                            unselectedIconColor = TextSecondary,
-                            unselectedTextColor = TextSecondary
-                        ),
-                        modifier = Modifier.testTag("partner_tab_kitchen")
-                    )
+                            },
+                            label = { Text("Menú", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = DeepBlack,
+                                selectedTextColor = GoldPrimary,
+                                indicatorColor = GoldPrimary,
+                                unselectedIconColor = TextSecondary,
+                                unselectedTextColor = TextSecondary
+                            ),
+                            modifier = Modifier.testTag("partner_tab_menu")
+                        )
 
-                    // Tab 2: Menu Stock & CMS Manager
-                    NavigationBarItem(
-                        selected = activeTab == PartnerSectionTab.MENU_CMS,
-                        onClick = { activeTab = PartnerSectionTab.MENU_CMS },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.RestaurantMenu,
-                                contentDescription = "Gestión Menú",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        label = { Text("Menú CMS", fontSize = 10.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = DeepBlack,
-                            selectedTextColor = GoldPrimary,
-                            indicatorColor = GoldPrimary,
-                            unselectedIconColor = TextSecondary,
-                            unselectedTextColor = TextSecondary
-                        ),
-                        modifier = Modifier.testTag("partner_tab_menu")
-                    )
+                        // Tab 3: Ajustes & Hub de Gestión (Finanzas, Repartidores, Historial)
+                        NavigationBarItem(
+                            selected = activeTab == PartnerSectionTab.MORE_HUB,
+                            onClick = { activeTab = PartnerSectionTab.MORE_HUB },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Dashboard,
+                                    contentDescription = "Ajustes",
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            },
+                            label = { Text("Ajustes", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = DeepBlack,
+                                selectedTextColor = GoldPrimary,
+                                indicatorColor = GoldPrimary,
+                                unselectedIconColor = TextSecondary,
+                                unselectedTextColor = TextSecondary
+                            ),
+                            modifier = Modifier.testTag("partner_tab_more")
+                        )
 
-                    // Tab 3: Ver Más (Historial, Finanzas, Repartidores)
-                    NavigationBarItem(
-                        selected = activeTab == PartnerSectionTab.MORE_HUB,
-                        onClick = { activeTab = PartnerSectionTab.MORE_HUB },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Dashboard,
-                                contentDescription = "Ver Más",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        label = { Text("Ver Más", fontSize = 10.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = DeepBlack,
-                            selectedTextColor = GoldPrimary,
-                            indicatorColor = GoldPrimary,
-                            unselectedIconColor = TextSecondary,
-                            unselectedTextColor = TextSecondary
-                        ),
-                        modifier = Modifier.testTag("partner_tab_more")
-                    )
-
-                    // Tab 4: Mass Push Notification Broadcast
-                    NavigationBarItem(
-                        selected = activeTab == PartnerSectionTab.PUSH_BROADCAST,
-                        onClick = { activeTab = PartnerSectionTab.PUSH_BROADCAST },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Campaign,
-                                contentDescription = "Push Masivo",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        label = { Text("Push", fontSize = 10.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = DeepBlack,
-                            selectedTextColor = GoldPrimary,
-                            indicatorColor = GoldPrimary,
-                            unselectedIconColor = TextSecondary,
-                            unselectedTextColor = TextSecondary
-                        ),
-                        modifier = Modifier.testTag("partner_tab_push")
-                    )
+                        // Tab 4: Mass Push Notification Broadcast
+                        NavigationBarItem(
+                            selected = activeTab == PartnerSectionTab.PUSH_BROADCAST,
+                            onClick = { activeTab = PartnerSectionTab.PUSH_BROADCAST },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Campaign,
+                                    contentDescription = "Push",
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            },
+                            label = { Text("Push", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = DeepBlack,
+                                selectedTextColor = GoldPrimary,
+                                indicatorColor = GoldPrimary,
+                                unselectedIconColor = TextSecondary,
+                                unselectedTextColor = TextSecondary
+                            ),
+                            modifier = Modifier.testTag("partner_tab_push")
+                        )
+                    }
                 }
             }
         }

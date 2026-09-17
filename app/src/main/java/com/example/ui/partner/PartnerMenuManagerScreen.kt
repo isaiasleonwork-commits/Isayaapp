@@ -123,26 +123,27 @@ fun PartnerMenuManagerScreen(
                     .fillMaxWidth()
                     .border(
                         1.dp,
-                        if (settings.isOpen) StatusGreen.copy(alpha = 0.5f) else SushiRed.copy(alpha = 0.5f),
-                        RoundedCornerShape(14.dp)
+                        if (settings.isOpen) StatusGreen.copy(alpha = 0.4f) else SushiRed.copy(alpha = 0.4f),
+                        RoundedCornerShape(12.dp)
                     ),
-                colors = CardDefaults.cardColors(containerColor = DarkCard)
+                colors = CardDefaults.cardColors(containerColor = DarkCard),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp),
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.weight(1f)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(36.dp)
                                 .clip(CircleShape)
                                 .background(if (settings.isOpen) StatusGreenContainer else SushiRedContainer),
                             contentAlignment = Alignment.Center
@@ -151,17 +152,28 @@ fun PartnerMenuManagerScreen(
                                 imageVector = Icons.Default.Store,
                                 contentDescription = null,
                                 tint = if (settings.isOpen) StatusGreen else SushiRedLight,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
                         Column {
-                            Text(
-                                text = if (settings.isOpen) "Tienda ABIERTA" else "Tienda CERRADA",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = if (settings.isOpen) "Tienda ABIERTA" else "Tienda CERRADA",
+                                    color = TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(7.dp)
+                                        .clip(CircleShape)
+                                        .background(if (settings.isOpen) StatusGreen else SushiRed)
+                                )
+                            }
                             Text(
                                 text = if (settings.isOpen) "Aceptando pedidos activamente" else "Fuera de horario comercial",
                                 color = TextSecondary,
@@ -185,23 +197,30 @@ fun PartnerMenuManagerScreen(
             }
         }
 
-        // Search Bar & Filter Chips
+        // Search Bar
         item {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 placeholder = { Text("Buscar por nombre, relleno o ingrediente...", color = TextMuted, fontSize = 12.sp) },
-                leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = GoldPrimary, modifier = Modifier.size(18.dp)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Buscar",
+                        tint = GoldPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
+                        IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(36.dp)) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Limpiar", tint = TextMuted, modifier = Modifier.size(16.dp))
                         }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = DarkCard,
@@ -215,7 +234,7 @@ fun PartnerMenuManagerScreen(
             )
         }
 
-        // Category Filter Row
+        // Category Filter Row with 8dp spacing and horizontal scrolling
         item {
             Row(
                 modifier = Modifier
@@ -267,19 +286,22 @@ fun PartnerMenuManagerScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Cambios sincronizados al instante",
+                    text = "Sincronización en tiempo real",
                     color = TextSecondary,
                     fontSize = 11.sp
                 )
             }
         }
 
-        // Compact Product Cards (Reduced vertical size, only "Editar" button)
+        // Clean Horizontal Product Cards: [Image 64x64px] | [Title & Description (flex-1)] | [Price + Edit Button]
         items(filteredItems, key = { it.id }) { product ->
             Card(
                 colors = CardDefaults.cardColors(containerColor = DarkCard),
                 shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (product.isAvailable) DarkBorder else SushiRed.copy(alpha = 0.4f)),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (product.isAvailable) DarkBorder else SushiRed.copy(alpha = 0.4f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("cms_product_card_${product.id}")
@@ -287,16 +309,16 @@ fun PartnerMenuManagerScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                        .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Left: Compact Thumbnail
+                    // 1. Left: Image 64x64px
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(1.dp, DarkBorder, RoundedCornerShape(8.dp))
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
                     ) {
                         SushiImage(
                             fallbackRes = product.imageRes,
@@ -305,12 +327,27 @@ fun PartnerMenuManagerScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
+                        if (!product.isAvailable) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(DeepBlack.copy(alpha = 0.65f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Agotado",
+                                    color = SushiRedLight,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
 
-                    // Center: Product Name, Category tag, Ingredients one-liner
+                    // 2. Center: Title & Description (flex-1 / weight(1f))
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -322,14 +359,16 @@ fun PartnerMenuManagerScreen(
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
+
                             Surface(
                                 color = DarkCardElevated,
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    text = "${product.category.icon} ${product.category.title}",
+                                    text = product.category.title,
                                     color = TextSecondary,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
@@ -338,40 +377,51 @@ fun PartnerMenuManagerScreen(
                             }
                         }
 
-                        // One-line ingredients ellipsis
+                        // Description max 2 lines with ellipsis (line-clamp-2)
                         Text(
-                            text = product.description.ifBlank { "Relleno e ingredientes Isaya Gourmet" },
-                            color = TextMuted,
-                            fontSize = 10.sp,
-                            maxLines = 1,
+                            text = product.description.ifBlank { "Relleno e ingredientes frescos Isaya Sushi." },
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    // Right: Price and the ONLY "Editar" button
+                    // 3. Right: Price & Compact Edit Button
                     Column(
                         horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
                             text = "$${String.format(Locale.US, "%.2f", product.price)}",
                             color = GoldPrimary,
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Black
                         )
 
+                        // Compact secondary edit button (clean pencil icon + text)
                         Button(
                             onClick = { editingProduct = product },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                             modifier = Modifier
-                                .height(26.dp)
+                                .height(28.dp)
                                 .testTag("btn_edit_product_${product.id}"),
                             shape = RoundedCornerShape(6.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = DeepBlack)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = DarkCardElevated,
+                                contentColor = GoldPrimary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.4f))
                         ) {
-                            Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(11.dp))
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text("Editar", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = GoldPrimary
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Editar", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

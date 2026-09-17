@@ -119,19 +119,62 @@ class IsayaRepository private constructor(private val appContext: Context) {
         notificationsListener = db.collection("isaya_broadcast_notifications")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
-                val list = snapshot?.documents?.mapNotNull { doc ->
-                    val id = doc.id
-                    val title = doc.getString("title") ?: return@mapNotNull null
-                    val body = doc.getString("body") ?: ""
-                    val promoTag = doc.getString("promoTag")
-                    val ts = doc.getLong("timestamp") ?: System.currentTimeMillis()
-                    PushNotificationMessage(id, title, body, promoTag, ts)
-                }?.sortedByDescending { it.timestamp } ?: emptyList()
+                try {
+                    val list = snapshot?.documents?.mapNotNull { doc ->
+                        try {
+                            val id = doc.id
+                            val title = getStringFromAny(doc.get("title")) ?: return@mapNotNull null
+                            val body = getStringFromAny(doc.get("body")) ?: ""
+                            val promoTag = getStringFromAny(doc.get("promoTag"))
+                            val ts = getLongFromAny(doc.get("timestamp")) ?: System.currentTimeMillis()
+                            PushNotificationMessage(id, title, body, promoTag, ts)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }?.sortedByDescending { it.timestamp } ?: emptyList()
 
-                if (list.isNotEmpty()) {
-                    _notifications.value = list
+                    if (list.isNotEmpty()) {
+                        _notifications.value = list
+                    }
+                } catch (e: Exception) {
+                    Log.e("IsayaRepository", "Error reading notifications snapshot", e)
                 }
             }
+    }
+
+    private fun getStringFromAny(obj: Any?): String? {
+        if (obj == null) return null
+        if (obj is String) return obj.takeIf { it.isNotBlank() }
+        return obj.toString().takeIf { it.isNotBlank() }
+    }
+
+    private fun getDoubleFromAny(obj: Any?): Double? {
+        return when (obj) {
+            null -> null
+            is Number -> obj.toDouble()
+            is String -> obj.trim().toDoubleOrNull()
+            else -> null
+        }
+    }
+
+    private fun getLongFromAny(obj: Any?): Long? {
+        return when (obj) {
+            null -> null
+            is Number -> obj.toLong()
+            is com.google.firebase.Timestamp -> obj.toDate().time
+            is String -> obj.trim().toLongOrNull()
+            else -> null
+        }
+    }
+
+    private fun getBooleanFromAny(obj: Any?): Boolean? {
+        return when (obj) {
+            null -> null
+            is Boolean -> obj
+            is String -> obj.trim().toBooleanStrictOrNull() ?: (obj.trim().lowercase() == "true" || obj.trim() == "1")
+            is Number -> obj.toInt() == 1
+            else -> null
+        }
     }
 
     private fun listenToFirestoreOrders(db: FirebaseFirestore) {
@@ -141,8 +184,200 @@ class IsayaRepository private constructor(private val appContext: Context) {
                     Log.w("IsayaRepository", "Listen failed.", error)
                     return@addSnapshotListener
                 }
-                // When documents change in Firestore, update local state
-                Log.d("IsayaRepository", "Firestore orders count: ${snapshots?.size()}")
+                if (snapshots == null || snapshots.isEmpty) return@addSnapshotListener
+
+                val existingMap = _orders.value.associateBy { it.id }.toMutableMap()
+                var hasNewIncomingOrder = false
+
+                for (doc in snapshots.documents) {
+                    try {
+                        val id = doc.id
+                        val orderNum = getStringFromAny(doc.get("orderNumber")) ?: "ISY-${id.takeLast(4).uppercase()}"
+
+                        // Support both nested object/map or flat fields for customer
+                        val customerRaw = doc.get("customer") ?: doc.get("customerInfo") ?: doc.get("client")
+                        val customerMap = customerRaw as? Map<*, *>
+
+                        val customerName = (if (customerMap != null) {
+                            getStringFromAny(customerMap["fullName"] ?: customerMap["name"] ?: customerMap["customerName"] ?: customerMap["clientName"] ?: customerMap["nombre"])
+                        } else {
+                            getStringFromAny(customerRaw)
+                        }) ?: getStringFromAny(doc.get("customerName") ?: doc.get("clientName") ?: doc.get("name") ?: doc.get("cliente")) ?: "Cliente Web"
+
+                        val phone = (if (customerMap != null) {
+                            getStringFromAny(customerMap["whatsappPhone"] ?: customerMap["phone"] ?: customerMap["telefono"] ?: customerMap["celular"] ?: customerMap["wsPhone"])
+                        } else null) ?: getStringFromAny(doc.get("whatsappPhone") ?: doc.get("phone") ?: doc.get("telefono") ?: doc.get("celular")) ?: ""
+
+                        val address = (if (customerMap != null) {
+                            getStringFromAny(customerMap["deliveryAddress"] ?: customerMap["address"] ?: customerMap["direccion"] ?: customerMap["ubicacion"])
+                        } else null) ?: getStringFromAny(doc.get("deliveryAddress") ?: doc.get("address") ?: doc.get("direccion") ?: doc.get("ubicacion")) ?: ""
+
+                        val referencePoint = (if (customerMap != null) {
+                            getStringFromAny(customerMap["referencePoint"] ?: customerMap["reference"] ?: customerMap["puntoReferencia"] ?: customerMap["ref"])
+                        } else null) ?: getStringFromAny(doc.get("referencePoint") ?: doc.get("reference") ?: doc.get("puntoReferencia") ?: doc.get("ref")) ?: ""
+
+                        val zoneName = (if (customerMap != null) {
+                            val zRaw = customerMap["deliveryZone"] ?: customerMap["zone"] ?: customerMap["zona"]
+                            if (zRaw is Map<*, *>) getStringFromAny(zRaw["name"]) else getStringFromAny(zRaw)
+                        } else null) ?: run {
+                            val zRaw = doc.get("deliveryZone") ?: doc.get("zone") ?: doc.get("zona")
+                            if (zRaw is Map<*, *>) getStringFromAny(zRaw["name"]) else getStringFromAny(zRaw)
+                        } ?: ""
+
+                        val gpsCoords = (if (customerMap != null) {
+                            getStringFromAny(customerMap["gpsCoordinates"] ?: customerMap["coordinates"] ?: customerMap["gps"])
+                        } else null) ?: getStringFromAny(doc.get("gpsCoordinates") ?: doc.get("coordinates") ?: doc.get("gps")) ?: "10.2469° N, 67.5958° O"
+
+                        val deliveryFeeVal = getDoubleFromAny(doc.get("deliveryFee") ?: doc.get("shippingFee") ?: doc.get("fee")) ?: 0.0
+                        val subtotalVal = getDoubleFromAny(doc.get("subtotal")) ?: 0.0
+                        val totalVal = getDoubleFromAny(doc.get("total") ?: doc.get("amount") ?: doc.get("totalAmount")) ?: (subtotalVal + deliveryFeeVal)
+
+                        val statusStr = getStringFromAny(doc.get("status")) ?: ""
+                        val status = when (statusStr.uppercase().trim()) {
+                            "PENDING_PAYMENT", "PENDING", "PENDIENTE", "PAGO_PENDIENTE", "RECEIVED" -> OrderStatus.PENDING_PAYMENT
+                            "PAYMENT_CONFIRMED", "CONFIRMED", "CONFIRMADO", "PAGO_CONFIRMADO", "APPROVED", "APROBADO" -> OrderStatus.PAYMENT_CONFIRMED
+                            "IN_KITCHEN", "KITCHEN", "COCINA", "EN_COCINA", "PREPARING", "PREPARACION", "EN_PREPARACION" -> OrderStatus.IN_KITCHEN
+                            "DISPATCHED_OR_READY", "DISPATCHED", "READY", "EN_CAMINO", "DESPACHADO", "LISTO", "EN_RUTA", "LISTO_PARA_RETIRAR" -> OrderStatus.DISPATCHED_OR_READY
+                            "DELIVERED", "COMPLETED", "ENTREGADO", "FINALIZADO" -> OrderStatus.DELIVERED
+                            else -> try { OrderStatus.valueOf(statusStr.trim()) } catch (e: Exception) { OrderStatus.PENDING_PAYMENT }
+                        }
+
+                        val deliveryModeStr = getStringFromAny(doc.get("deliveryMode") ?: doc.get("mode") ?: doc.get("type")) ?: "DELIVERY"
+                        val deliveryMode = if (deliveryModeStr.equals("PICKUP", ignoreCase = true) || deliveryModeStr.equals("RETIRO", ignoreCase = true)) {
+                            DeliveryMode.PICKUP
+                        } else {
+                            DeliveryMode.DELIVERY
+                        }
+
+                        val driver = getStringFromAny(doc.get("assignedDriver") ?: doc.get("driver") ?: doc.get("repartidor"))
+                        val ts = getLongFromAny(doc.get("timestamp") ?: doc.get("createdAt") ?: doc.get("date") ?: doc.get("created_at")) ?: System.currentTimeMillis()
+
+                        // Support payment proof as nested object/map or flat fields
+                        val paymentRaw = doc.get("paymentProof") ?: doc.get("payment") ?: doc.get("pago")
+                        val paymentMap = paymentRaw as? Map<*, *>
+
+                        val bankName = (if (paymentMap != null) {
+                            getStringFromAny(paymentMap["bankName"] ?: paymentMap["bank"] ?: paymentMap["banco"])
+                        } else null) ?: getStringFromAny(doc.get("bankName") ?: doc.get("bank") ?: doc.get("banco")) ?: "0105 Mercantil"
+
+                        val refDigits = (if (paymentMap != null) {
+                            getStringFromAny(paymentMap["referenceDigits"] ?: paymentMap["reference"] ?: paymentMap["referencia"] ?: paymentMap["ref"])
+                        } else null) ?: getStringFromAny(doc.get("referenceDigits") ?: doc.get("reference") ?: doc.get("referencia") ?: doc.get("ref")) ?: ""
+
+                        val proofUrl = (if (paymentMap != null) {
+                            getStringFromAny(paymentMap["receiptImageUrl"] ?: paymentMap["paymentProofUrl"] ?: paymentMap["receiptUrl"] ?: paymentMap["receiptImage"] ?: paymentMap["comprobanteUrl"])
+                        } else null) ?: getStringFromAny(
+                            doc.get("paymentProofUrl")
+                                ?: doc.get("receiptImageUrl")
+                                ?: doc.get("receiptUrl")
+                                ?: doc.get("receiptImage")
+                                ?: doc.get("comprobanteUrl")
+                        )
+
+                        val receiptFileName = (if (paymentMap != null) {
+                            getStringFromAny(paymentMap["receiptFileName"] ?: paymentMap["fileName"])
+                        } else null) ?: getStringFromAny(doc.get("receiptFileName")) ?: "comprobante_web.jpg"
+
+                        val receiptAttached = (if (paymentMap != null) {
+                            getBooleanFromAny(paymentMap["receiptAttached"])
+                        } else null) ?: getBooleanFromAny(doc.get("receiptAttached")) ?: (!proofUrl.isNullOrBlank() || refDigits.isNotBlank())
+
+                        val customer = CustomerInfo(
+                            fullName = customerName,
+                            whatsappPhone = phone,
+                            deliveryAddress = address,
+                            referencePoint = referencePoint,
+                            deliveryZone = if (zoneName.isNotBlank()) DeliveryZone(zoneName, deliveryFeeVal) else null,
+                            gpsCoordinates = gpsCoords
+                        )
+
+                        val proof = PaymentProof(
+                            bankName = bankName,
+                            referenceDigits = refDigits,
+                            receiptAttached = receiptAttached,
+                            receiptImageUrl = proofUrl,
+                            receiptFileName = receiptFileName
+                        )
+
+                        // Parse items from Firestore if available
+                        val itemsRaw = doc.get("items") ?: doc.get("products") ?: doc.get("cartItems")
+                        val parsedItems: List<CartItem>? = if (itemsRaw is List<*>) {
+                            itemsRaw.mapNotNull { itemObj ->
+                                if (itemObj is Map<*, *>) {
+                                    val itemName = getStringFromAny(itemObj["name"] ?: itemObj["productName"] ?: itemObj["title"] ?: itemObj["nombre"]) ?: "Producto"
+                                    val itemQty = (getLongFromAny(itemObj["quantity"] ?: itemObj["qty"] ?: itemObj["count"] ?: itemObj["cantidad"]) ?: 1L).toInt()
+                                    val itemPrice = getDoubleFromAny(itemObj["price"] ?: itemObj["unitPrice"] ?: itemObj["precio"]) ?: 0.0
+                                    val itemDesc = getStringFromAny(itemObj["description"] ?: itemObj["desc"]) ?: ""
+                                    CartItem(
+                                        id = getStringFromAny(itemObj["id"]) ?: UUID.randomUUID().toString(),
+                                        product = SushiProduct(
+                                            id = getStringFromAny(itemObj["productId"]) ?: UUID.randomUUID().toString(),
+                                            name = itemName,
+                                            category = SushiCategory.COMBOS,
+                                            description = itemDesc,
+                                            price = itemPrice,
+                                            imageRes = R.drawable.img_sushi_hero
+                                        ),
+                                        quantity = itemQty.coerceAtLeast(1),
+                                        unitPrice = itemPrice
+                                    )
+                                } else null
+                            }.takeIf { it.isNotEmpty() }
+                        } else null
+
+                        val finalItems = parsedItems ?: existingMap[id]?.items ?: listOf(
+                            CartItem(
+                                id = UUID.randomUUID().toString(),
+                                product = _menu.value.firstOrNull() ?: SushiProduct(
+                                    id = "prod_web_order",
+                                    name = "Pedido Web Isaya",
+                                    category = SushiCategory.COMBOS,
+                                    description = "Orden enviada desde la Web de Clientes",
+                                    price = totalVal,
+                                    imageRes = R.drawable.img_sushi_hero
+                                ),
+                                quantity = 1,
+                                unitPrice = totalVal
+                            )
+                        )
+
+                        val isNew = !existingMap.containsKey(id)
+                        val order = Order(
+                            id = id,
+                            orderNumber = orderNum,
+                            createdAt = ts,
+                            items = finalItems,
+                            deliveryMode = deliveryMode,
+                            customerInfo = customer,
+                            paymentProof = proof,
+                            status = status,
+                            subtotal = if (subtotalVal > 0) subtotalVal else (totalVal - deliveryFeeVal).coerceAtLeast(0.0),
+                            deliveryFee = deliveryFeeVal,
+                            total = totalVal,
+                            assignedDriver = driver
+                        )
+
+                        if (isNew) {
+                            hasNewIncomingOrder = true
+                        }
+                        existingMap[id] = order
+                    } catch (e: Exception) {
+                        Log.e("IsayaRepository", "Error parsing order document: ${doc.id}", e)
+                    }
+                }
+
+                val sortedList = existingMap.values.sortedByDescending { it.createdAt }
+                _orders.value = sortedList
+
+                if (hasNewIncomingOrder) {
+                    val settings = _settings.value
+                    SoundAlertHelper.playTone(
+                        context = appContext,
+                        tone = settings.selectedAlertTone,
+                        volume = settings.alertVolume,
+                        vibrate = settings.vibrationEnabled
+                    )
+                }
             }
     }
 
@@ -150,28 +385,36 @@ class IsayaRepository private constructor(private val appContext: Context) {
         settingsListener = db.collection("isaya_settings").document("general")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
-                val isOpen = snapshot?.getBoolean("isOpen") ?: true
-                _settings.update { it.copy(isOpen = isOpen) }
+                try {
+                    val isOpen = getBooleanFromAny(snapshot?.get("isOpen")) ?: true
+                    _settings.update { it.copy(isOpen = isOpen) }
+                } catch (e: Exception) {
+                    Log.e("IsayaRepository", "Error updating settings from Firestore", e)
+                }
             }
     }
 
     private fun listenToFirestoreBrandIdentity(db: FirebaseFirestore) {
         db.collection("isaya_settings").document("brand_identity")
             .addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener
-                val slogan = snapshot?.getString("officialSlogan") ?: return@addSnapshotListener
-                val brandName = snapshot.getString("brandName") ?: "ISAYA SUSHI"
-                val logoUri = snapshot.getString("logoUri")
-                val tagline = snapshot.getString("brandTagline") ?: "100% Tempurizado y Cocinado"
-                val ts = snapshot.getLong("lastUpdated") ?: System.currentTimeMillis()
-                _brandIdentity.update {
-                    it.copy(
-                        brandName = brandName,
-                        officialSlogan = slogan,
-                        logoUri = if (!logoUri.isNullOrBlank()) logoUri else it.logoUri,
-                        brandTagline = tagline,
-                        lastUpdated = ts
-                    )
+                if (error != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
+                try {
+                    val slogan = getStringFromAny(snapshot.get("officialSlogan")) ?: return@addSnapshotListener
+                    val brandName = getStringFromAny(snapshot.get("brandName")) ?: "ISAYA SUSHI"
+                    val logoUri = getStringFromAny(snapshot.get("logoUri"))
+                    val tagline = getStringFromAny(snapshot.get("brandTagline")) ?: "100% Tempurizado y Cocinado"
+                    val ts = getLongFromAny(snapshot.get("lastUpdated")) ?: System.currentTimeMillis()
+                    _brandIdentity.update {
+                        it.copy(
+                            brandName = brandName,
+                            officialSlogan = slogan,
+                            logoUri = if (!logoUri.isNullOrBlank()) logoUri else it.logoUri,
+                            brandTagline = tagline,
+                            lastUpdated = ts
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("IsayaRepository", "Error updating brand identity from Firestore", e)
                 }
             }
     }

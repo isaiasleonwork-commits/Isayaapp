@@ -185,6 +185,7 @@ data class PaymentProof(
     val referenceDigits: String = "",
     val receiptAttached: Boolean = true,
     val receiptFileName: String = "pago_movil_capture.jpg",
+    val receiptImageUrl: String? = null,
     @DrawableRes val receiptImageRes: Int = com.example.R.drawable.img_pago_movil_capture
 )
 

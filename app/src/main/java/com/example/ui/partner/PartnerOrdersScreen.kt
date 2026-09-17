@@ -2,11 +2,14 @@ package com.example.ui.partner
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,17 +25,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import com.example.R
 import com.example.model.DeliveryMode
 import com.example.model.Order
@@ -53,6 +61,7 @@ fun PartnerOrdersScreen(
     val context = LocalContext.current
     var selectedFilter by remember { mutableStateOf<OrderStatus?>(null) }
     var viewingReceiptOrder by remember { mutableStateOf<Order?>(null) }
+    var viewingFullscreenReceiptOrder by remember { mutableStateOf<Order?>(null) }
     var viewingMapOrder by remember { mutableStateOf<Order?>(null) }
 
     val activeOrders = remember(orders) {
@@ -72,79 +81,107 @@ fun PartnerOrdersScreen(
             .fillMaxSize()
             .background(DeepBlack)
     ) {
-        // Compact Monitor Bar with Simulator Button
-        Row(
+        // Vibrant Monitor Bar with Simulator Button
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            color = DarkCardElevated,
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, SushiRed.copy(alpha = 0.4f))
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Sensors,
-                    contentDescription = "En vivo",
-                    tint = SushiRed,
-                    modifier = Modifier.size(15.dp)
-                )
-                Text(
-                    text = "COMANDAS EN VIVO",
-                    color = SushiRedLight,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.5.sp
-                )
-                Text(
-                    text = "(${activeOrders.size})",
-                    color = GoldPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Quick Simulate Button
-            OutlinedButton(
-                onClick = onSimulateOrder,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = GoldPrimary),
-                border = androidx.compose.foundation.BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.6f)),
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                 modifier = Modifier
-                    .height(28.dp)
-                    .testTag("simulate_order_button")
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.AddAlert, contentDescription = null, modifier = Modifier.size(13.dp))
-                    Text("Probar Alerta", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(SushiRed.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Sensors,
+                            contentDescription = "En vivo",
+                            tint = SushiRedLight,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                    Text(
+                        text = "COMANDAS EN VIVO",
+                        color = TextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp
+                    )
+                    Surface(
+                        color = SushiRed,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = "${activeOrders.size}",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+
+                // Quick Simulate Button
+                Button(
+                    onClick = onSimulateOrder,
+                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = DeepBlack),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    modifier = Modifier
+                        .height(28.dp)
+                        .testTag("simulate_order_button")
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.AddAlert, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Text("Probar Alerta", fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
                 }
             }
         }
 
-        // Compact iOS Status Filter Chips Row
+        // Compact Vibrant Status Filter Chips Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 14.dp, vertical = 4.dp),
+                .padding(horizontal = 12.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             FilterChip(
                 selected = selectedFilter == null,
                 onClick = { selectedFilter = null },
-                label = { Text("Todos (${activeOrders.size})", fontSize = 11.sp) },
+                label = { Text("Todos (${activeOrders.size})", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = SushiRed,
-                    selectedLabelColor = TextPrimary,
+                    selectedContainerColor = GoldPrimary,
+                    selectedLabelColor = DeepBlack,
                     containerColor = DarkCard,
-                    labelColor = TextSecondary
+                    labelColor = TextPrimary
                 ),
-                shape = RoundedCornerShape(12.dp),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selectedFilter == null,
+                    borderColor = DarkBorder,
+                    selectedBorderColor = GoldPrimary
+                ),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.height(30.dp)
             )
 
@@ -153,14 +190,20 @@ fun PartnerOrdersScreen(
                 onClick = {
                     selectedFilter = if (selectedFilter == OrderStatus.PENDING_PAYMENT) null else OrderStatus.PENDING_PAYMENT
                 },
-                label = { Text("⏳ Pago ($pendingCount)", fontSize = 11.sp) },
+                label = { Text("⏳ Pago ($pendingCount)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = StatusOrange,
                     selectedLabelColor = DeepBlack,
                     containerColor = DarkCard,
-                    labelColor = TextSecondary
+                    labelColor = StatusOrange
                 ),
-                shape = RoundedCornerShape(12.dp),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selectedFilter == OrderStatus.PENDING_PAYMENT,
+                    borderColor = StatusOrange.copy(alpha = 0.4f),
+                    selectedBorderColor = StatusOrange
+                ),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.height(30.dp)
             )
 
@@ -169,14 +212,20 @@ fun PartnerOrdersScreen(
                 onClick = {
                     selectedFilter = if (selectedFilter == OrderStatus.IN_KITCHEN) null else OrderStatus.IN_KITCHEN
                 },
-                label = { Text("🍳 Cocina ($kitchenCount)", fontSize = 11.sp) },
+                label = { Text("🍳 Cocina ($kitchenCount)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = GoldPrimary,
-                    selectedLabelColor = DeepBlack,
+                    selectedContainerColor = SushiRed,
+                    selectedLabelColor = Color.White,
                     containerColor = DarkCard,
-                    labelColor = TextSecondary
+                    labelColor = SushiRedLight
                 ),
-                shape = RoundedCornerShape(12.dp),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selectedFilter == OrderStatus.IN_KITCHEN,
+                    borderColor = SushiRed.copy(alpha = 0.4f),
+                    selectedBorderColor = SushiRed
+                ),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.height(30.dp)
             )
 
@@ -185,14 +234,20 @@ fun PartnerOrdersScreen(
                 onClick = {
                     selectedFilter = if (selectedFilter == OrderStatus.DISPATCHED_OR_READY) null else OrderStatus.DISPATCHED_OR_READY
                 },
-                label = { Text("🛵 En Ruta ($dispatchedCount)", fontSize = 11.sp) },
+                label = { Text("🛵 En Ruta ($dispatchedCount)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = StatusGreen,
                     selectedLabelColor = DeepBlack,
                     containerColor = DarkCard,
-                    labelColor = TextSecondary
+                    labelColor = StatusGreen
                 ),
-                shape = RoundedCornerShape(12.dp),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selectedFilter == OrderStatus.DISPATCHED_OR_READY,
+                    borderColor = StatusGreen.copy(alpha = 0.4f),
+                    selectedBorderColor = StatusGreen
+                ),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.height(30.dp)
             )
         }
@@ -228,13 +283,24 @@ fun PartnerOrdersScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filteredOrders, key = { it.id }) { order ->
-                    CompactPartnerOrderCard(
-                        order = order,
-                        onUpdateStatus = { newStatus -> onUpdateStatus(order.id, newStatus) },
-                        onAssignDriver = { driverName -> onAssignDriver(order.id, driverName) },
-                        onViewReceipt = { viewingReceiptOrder = order },
-                        onViewMap = { viewingMapOrder = order }
-                    )
+                    Box(
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = tween(durationMillis = 300),
+                            fadeOutSpec = tween(durationMillis = 300),
+                            placementSpec = spring(
+                                stiffness = Spring.StiffnessMediumLow,
+                                dampingRatio = Spring.DampingRatioLowBouncy
+                            )
+                        )
+                    ) {
+                        CompactPartnerOrderCard(
+                            order = order,
+                            onUpdateStatus = { newStatus -> onUpdateStatus(order.id, newStatus) },
+                            onAssignDriver = { driverName -> onAssignDriver(order.id, driverName) },
+                            onViewReceipt = { viewingReceiptOrder = order },
+                            onViewMap = { viewingMapOrder = order }
+                        )
+                    }
                 }
                 item {
                     Spacer(modifier = Modifier.height(60.dp))
@@ -344,26 +410,13 @@ fun PartnerOrdersScreen(
                         }
                     }
 
-                    // REAL CAPTURE IMAGE DISPLAY (Maximized & Un-distorted ContentScale.Fit)
-                    Text("Capture Adjunto por el Cliente:", color = GoldLight, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 200.dp, max = 280.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(DeepBlack)
-                            .border(1.dp, GoldDark, RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = order.paymentProof.receiptImageRes),
-                            contentDescription = "Capture de Pago Móvil",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
+                    // REAL CAPTURE IMAGE DISPLAY & INTERACTIVE VIEWER
+                    InteractiveReceiptViewer(
+                        order = order,
+                        onExpandFullscreen = {
+                            viewingFullscreenReceiptOrder = order
+                        }
+                    )
 
                     // Client & Bank Info Card
                     Surface(
@@ -460,6 +513,13 @@ fun PartnerOrdersScreen(
             }
         }
     }
+
+    viewingFullscreenReceiptOrder?.let { order ->
+        FullscreenReceiptLightboxDialog(
+            order = order,
+            onDismiss = { viewingFullscreenReceiptOrder = null }
+        )
+    }
 }
 
 /**
@@ -477,85 +537,193 @@ fun CompactPartnerOrderCard(
     val timeFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
     val formattedTime = remember(order.createdAt) { timeFormat.format(Date(order.createdAt)) }
 
+    // Fluid Border Color Animation based on order state
+    val targetBorderColor = when (order.status) {
+        OrderStatus.PENDING_PAYMENT -> StatusOrange.copy(alpha = 0.5f)
+        OrderStatus.PAYMENT_CONFIRMED -> StatusBlue.copy(alpha = 0.6f)
+        OrderStatus.IN_KITCHEN -> SushiRed.copy(alpha = 0.85f)
+        OrderStatus.DISPATCHED_OR_READY -> StatusGreen.copy(alpha = 0.7f)
+        OrderStatus.DELIVERED -> StatusGreen.copy(alpha = 0.4f)
+    }
+    val animatedBorderColor by animateColorAsState(
+        targetValue = targetBorderColor,
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+        label = "cardBorderColor"
+    )
+
+    // Fluid Background Container Color Animation
+    val targetContainerColor = when (order.status) {
+        OrderStatus.IN_KITCHEN -> DarkCardElevated
+        OrderStatus.PENDING_PAYMENT -> DarkCard
+        else -> DarkCard
+    }
+    val animatedContainerColor by animateColorAsState(
+        targetValue = targetContainerColor,
+        animationSpec = tween(durationMillis = 350),
+        label = "cardContainerColor"
+    )
+
+    // Fluid Progress Stepper across top of card
+    val targetProgress = when (order.status) {
+        OrderStatus.PENDING_PAYMENT -> 0.25f
+        OrderStatus.PAYMENT_CONFIRMED -> 0.50f
+        OrderStatus.IN_KITCHEN -> 0.75f
+        OrderStatus.DISPATCHED_OR_READY -> 1.0f
+        OrderStatus.DELIVERED -> 1.0f
+    }
+    val animatedProgress by animateFloatAsState(
+        targetValue = targetProgress,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
+        label = "cardProgress"
+    )
+    val animatedProgressColor by animateColorAsState(
+        targetValue = when (order.status) {
+            OrderStatus.PENDING_PAYMENT -> StatusOrange
+            OrderStatus.PAYMENT_CONFIRMED -> StatusBlue
+            OrderStatus.IN_KITCHEN -> SushiRed
+            OrderStatus.DISPATCHED_OR_READY -> StatusGreen
+            OrderStatus.DELIVERED -> StatusGreen
+        },
+        animationSpec = tween(350),
+        label = "progressColor"
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(0.5.dp, DarkBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, animatedBorderColor, RoundedCornerShape(16.dp))
+            .animateContentSize(
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                )
+            )
             .testTag("partner_order_${order.orderNumber}"),
-        colors = CardDefaults.cardColors(containerColor = DarkCard)
+        colors = CardDefaults.cardColors(containerColor = animatedContainerColor)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // ROW 1 (Header Flex): #Order + Time + Mode Pill + Spacer + Total + Status Badge
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            // Animated Status Progress Bar (Layout Animation)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(DarkBorder.copy(alpha = 0.5f))
             ) {
-                Text(
-                    text = "#${order.orderNumber}",
-                    color = GoldPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Black
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(animatedProgress)
+                        .background(animatedProgressColor)
                 )
-                Text(
-                    text = formattedTime,
-                    color = TextMuted,
-                    fontSize = 10.sp
-                )
+            }
 
-                Surface(
-                    color = DeepBlack,
-                    shape = RoundedCornerShape(6.dp),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, DarkBorder)
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // ROW 1 (Header Flex): #Order + Time + Mode Pill + Spacer + Total + Animated Status Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = if (order.deliveryMode == DeliveryMode.DELIVERY) "🛵 Delivery" else "🛍️ Retiro",
-                        color = GoldLight,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
+                        text = "#${order.orderNumber}",
+                        color = GoldPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black
                     )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = "$${String.format(Locale.US, "%.2f", order.total)}",
-                    color = TextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-
-                // Compact Status Pill
-                Surface(
-                    color = when (order.status) {
-                        OrderStatus.PENDING_PAYMENT -> StatusOrange.copy(alpha = 0.2f)
-                        OrderStatus.PAYMENT_CONFIRMED -> StatusBlue.copy(alpha = 0.2f)
-                        OrderStatus.IN_KITCHEN -> SushiRed.copy(alpha = 0.2f)
-                        OrderStatus.DISPATCHED_OR_READY -> StatusGreen.copy(alpha = 0.2f)
-                        OrderStatus.DELIVERED -> StatusGreen.copy(alpha = 0.3f)
-                    },
-                    shape = RoundedCornerShape(6.dp)
-                ) {
                     Text(
-                        text = order.status.label,
-                        color = when (order.status) {
+                        text = formattedTime,
+                        color = TextMuted,
+                        fontSize = 10.sp
+                    )
+
+                    Surface(
+                        color = DeepBlack,
+                        shape = RoundedCornerShape(6.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, DarkBorder)
+                    ) {
+                        Text(
+                            text = if (order.deliveryMode == DeliveryMode.DELIVERY) "🛵 Delivery" else "🛍️ Retiro",
+                            color = GoldLight,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Text(
+                        text = "$${String.format(Locale.US, "%.2f", order.total)}",
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+
+                    // Compact Status Pill with AnimatedContent
+                    AnimatedContent(
+                        targetState = order.status,
+                        transitionSpec = {
+                            (slideInVertically { height -> height } + fadeIn(tween(250)))
+                                .togetherWith(slideOutVertically { height -> -height } + fadeOut(tween(200)))
+                        },
+                        label = "statusBadgeAnimation"
+                    ) { targetStatus ->
+                        val badgeBg = when (targetStatus) {
+                            OrderStatus.PENDING_PAYMENT -> StatusOrange.copy(alpha = 0.2f)
+                            OrderStatus.PAYMENT_CONFIRMED -> StatusBlue.copy(alpha = 0.2f)
+                            OrderStatus.IN_KITCHEN -> SushiRed.copy(alpha = 0.25f)
+                            OrderStatus.DISPATCHED_OR_READY -> StatusGreen.copy(alpha = 0.2f)
+                            OrderStatus.DELIVERED -> StatusGreen.copy(alpha = 0.3f)
+                        }
+                        val badgeBorder = when (targetStatus) {
+                            OrderStatus.PENDING_PAYMENT -> StatusOrange.copy(alpha = 0.5f)
+                            OrderStatus.PAYMENT_CONFIRMED -> StatusBlue.copy(alpha = 0.5f)
+                            OrderStatus.IN_KITCHEN -> SushiRed.copy(alpha = 0.8f)
+                            OrderStatus.DISPATCHED_OR_READY -> StatusGreen.copy(alpha = 0.5f)
+                            OrderStatus.DELIVERED -> StatusGreen.copy(alpha = 0.5f)
+                        }
+                        val badgeTextColor = when (targetStatus) {
                             OrderStatus.PENDING_PAYMENT -> StatusOrange
                             OrderStatus.PAYMENT_CONFIRMED -> StatusBlue
                             OrderStatus.IN_KITCHEN -> SushiRedLight
                             OrderStatus.DISPATCHED_OR_READY -> StatusGreen
                             OrderStatus.DELIVERED -> StatusGreen
-                        },
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
+                        }
+
+                        Surface(
+                            color = badgeBg,
+                            shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, badgeBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                if (targetStatus == OrderStatus.IN_KITCHEN) {
+                                    Icon(
+                                        imageVector = Icons.Default.OutdoorGrill,
+                                        contentDescription = null,
+                                        tint = SushiRedLight,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                }
+                                Text(
+                                    text = targetStatus.label,
+                                    color = badgeTextColor,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
-            }
 
             // ROW 2 (Horizontal Flex Info & Capture):
             // Left: Client Name, Phone, Items inline summary, Address
@@ -687,28 +855,58 @@ fun CompactPartnerOrderCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        val hasProof = order.paymentProof.receiptAttached && (!order.paymentProof.receiptImageUrl.isNullOrBlank() || order.paymentProof.receiptImageRes != 0)
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(RoundedCornerShape(4.dp))
+                                .background(DarkCard),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Image(
-                                painter = painterResource(id = order.paymentProof.receiptImageRes),
-                                contentDescription = "Capture",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
+                            if (!order.paymentProof.receiptImageUrl.isNullOrBlank()) {
+                                SubcomposeAsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(order.paymentProof.receiptImageUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Comprobante",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                    loading = {
+                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(14.dp), color = GoldPrimary)
+                                        }
+                                    },
+                                    error = {
+                                        Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
+                                    }
+                                )
+                            } else if (order.paymentProof.receiptAttached && order.paymentProof.receiptImageRes != 0) {
+                                Image(
+                                    painter = painterResource(id = order.paymentProof.receiptImageRes),
+                                    contentDescription = "Comprobante",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.ReceiptLong,
+                                    contentDescription = "Sin comprobante",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
 
                         Column {
                             Text(
-                                text = "Ref:",
+                                text = if (hasProof) "Ref:" else "Sin foto",
                                 color = TextSecondary,
                                 fontSize = 8.sp
                             )
                             Text(
                                 text = "••••${order.paymentProof.referenceDigits.takeLast(4).ifBlank { "4892" }}",
-                                color = GoldPrimary,
+                                color = if (hasProof) GoldPrimary else TextMuted,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -767,101 +965,111 @@ fun CompactPartnerOrderCard(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // One-Touch Action Button (Dense 30dp height)
-                when (order.status) {
-                    OrderStatus.PENDING_PAYMENT -> {
-                        Button(
-                            onClick = { onUpdateStatus(OrderStatus.PAYMENT_CONFIRMED) },
-                            colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = DeepBlack),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                            modifier = Modifier
-                                .height(30.dp)
-                                .testTag("btn_approve_payment_${order.id}")
-                        ) {
-                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(13.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Aprobar Pago", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                // One-Touch Action Button with AnimatedContent transition
+                AnimatedContent(
+                    targetState = order.status,
+                    transitionSpec = {
+                        (scaleIn(initialScale = 0.88f) + fadeIn(tween(250)))
+                            .togetherWith(scaleOut(targetScale = 0.88f) + fadeOut(tween(200)))
+                    },
+                    label = "actionButtonAnimation"
+                ) { targetStatus ->
+                    when (targetStatus) {
+                        OrderStatus.PENDING_PAYMENT -> {
+                            Button(
+                                onClick = { onUpdateStatus(OrderStatus.PAYMENT_CONFIRMED) },
+                                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = DeepBlack),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier
+                                    .height(30.dp)
+                                    .testTag("btn_approve_payment_${order.id}")
+                            ) {
+                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Aprobar Pago", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
-                    }
 
-                    OrderStatus.PAYMENT_CONFIRMED -> {
-                        Button(
-                            onClick = { onUpdateStatus(OrderStatus.IN_KITCHEN) },
-                            colors = ButtonDefaults.buttonColors(containerColor = SushiRed, contentColor = TextPrimary),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                            modifier = Modifier
-                                .height(30.dp)
-                                .testTag("btn_move_to_kitchen_${order.id}")
-                        ) {
-                            Icon(imageVector = Icons.Default.OutdoorGrill, contentDescription = null, modifier = Modifier.size(13.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("A Cocina", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        OrderStatus.PAYMENT_CONFIRMED -> {
+                            Button(
+                                onClick = { onUpdateStatus(OrderStatus.IN_KITCHEN) },
+                                colors = ButtonDefaults.buttonColors(containerColor = SushiRed, contentColor = TextPrimary),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier
+                                    .height(30.dp)
+                                    .testTag("btn_move_to_kitchen_${order.id}")
+                            ) {
+                                Icon(imageVector = Icons.Default.OutdoorGrill, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("A Cocina", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
-                    }
 
-                    OrderStatus.IN_KITCHEN -> {
-                        Button(
-                            onClick = { onUpdateStatus(OrderStatus.DISPATCHED_OR_READY) },
-                            colors = ButtonDefaults.buttonColors(containerColor = StatusGreen, contentColor = DeepBlack),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                            modifier = Modifier
-                                .height(30.dp)
-                                .testTag("btn_dispatch_${order.id}")
-                        ) {
-                            Icon(
-                                imageVector = if (order.deliveryMode == DeliveryMode.DELIVERY) Icons.Default.DeliveryDining else Icons.Default.Storefront,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (order.deliveryMode == DeliveryMode.DELIVERY) {
-                                    if (order.assignedDriver != null) "Despachar (${order.assignedDriver})" else "Despachar"
-                                } else {
-                                    "Listo para Retiro"
-                                },
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        OrderStatus.IN_KITCHEN -> {
+                            Button(
+                                onClick = { onUpdateStatus(OrderStatus.DISPATCHED_OR_READY) },
+                                colors = ButtonDefaults.buttonColors(containerColor = StatusGreen, contentColor = DeepBlack),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier
+                                    .height(30.dp)
+                                    .testTag("btn_dispatch_${order.id}")
+                            ) {
+                                Icon(
+                                    imageVector = if (order.deliveryMode == DeliveryMode.DELIVERY) Icons.Default.DeliveryDining else Icons.Default.Storefront,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (order.deliveryMode == DeliveryMode.DELIVERY) {
+                                        if (order.assignedDriver != null) "Despachar (${order.assignedDriver})" else "Despachar"
+                                    } else {
+                                        "Listo para Retiro"
+                                    },
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                    }
 
-                    OrderStatus.DISPATCHED_OR_READY -> {
-                        Button(
-                            onClick = { onUpdateStatus(OrderStatus.DELIVERED) },
-                            colors = ButtonDefaults.buttonColors(containerColor = DarkCardElevated, contentColor = StatusGreen),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, StatusGreen.copy(alpha = 0.6f)),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                            modifier = Modifier.height(30.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.DoneAll, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(13.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "Finalizar", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        OrderStatus.DISPATCHED_OR_READY -> {
+                            Button(
+                                onClick = { onUpdateStatus(OrderStatus.DELIVERED) },
+                                colors = ButtonDefaults.buttonColors(containerColor = DarkCardElevated, contentColor = StatusGreen),
+                                shape = RoundedCornerShape(8.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, StatusGreen.copy(alpha = 0.6f)),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.height(30.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.DoneAll, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = "Finalizar", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
-                    }
 
-                    OrderStatus.DELIVERED -> {
-                        Surface(
-                            color = StatusGreenContainer,
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                text = "Completado",
-                                color = StatusGreen,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                        OrderStatus.DELIVERED -> {
+                            Surface(
+                                color = StatusGreenContainer,
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = "Completado",
+                                    color = StatusGreen,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
 }
 
 /**
@@ -1206,6 +1414,469 @@ fun PartnerOrderGpsMapDialog(
                     Icon(imageVector = Icons.Default.Directions, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Abrir en Google Maps / Waze", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * INTERACTIVE REAL RECEIPT VIEWER
+ * Loads the authentic payment capture URL from Firebase / local device.
+ * Features pinch-to-zoom, pan, zoom control buttons, and full lightbox expansion.
+ * Renders a clean "Sin comprobante adjunto" notice if no photo was uploaded.
+ */
+@Composable
+fun InteractiveReceiptViewer(
+    order: Order,
+    onExpandFullscreen: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val proof = order.paymentProof
+    val hasImage = proof.receiptAttached && (!proof.receiptImageUrl.isNullOrBlank() || proof.receiptImageRes != 0)
+
+    if (!hasImage) {
+        // Flat placeholder when no image is uploaded
+        Surface(
+            color = DarkCard,
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
+            modifier = modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp, horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(DarkCardElevated),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ReceiptLong,
+                        contentDescription = null,
+                        tint = TextMuted,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Text(
+                    text = "Sin comprobante adjunto",
+                    color = TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "El cliente no adjuntó una foto de captura para esta orden.",
+                    color = TextMuted,
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        return
+    }
+
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+
+    val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
+        scale = (scale * zoomChange).coerceIn(1f, 4f)
+        if (scale > 1f) {
+            offset += offsetChange
+        } else {
+            offset = Offset.Zero
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Capture Real del Cliente:",
+                color = GoldLight,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            // Fullscreen lightbox button
+            Surface(
+                color = DarkCardElevated,
+                shape = RoundedCornerShape(8.dp),
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GoldDark),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onExpandFullscreen() }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ZoomIn,
+                        contentDescription = "Ampliar",
+                        tint = GoldPrimary,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = "Pantalla Completa",
+                        color = GoldPrimary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        // Zoomable Canvas Box
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(DeepBlack)
+                .border(1.dp, GoldDark.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+                .transformable(state = transformState),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!proof.receiptImageUrl.isNullOrBlank()) {
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(proof.receiptImageUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Capture de Pago Móvil",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        ),
+                    contentScale = ContentScale.Fit,
+                    loading = {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CircularProgressIndicator(color = GoldPrimary, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                                Text("Cargando comprobante...", color = TextSecondary, fontSize = 10.sp)
+                            }
+                        }
+                    },
+                    error = {
+                        if (proof.receiptImageRes != 0) {
+                            Image(
+                                painter = painterResource(id = proof.receiptImageRes),
+                                contentDescription = "Capture de Pago Móvil",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer(
+                                        scaleX = scale,
+                                        scaleY = scale,
+                                        translationX = offset.x,
+                                        translationY = offset.y
+                                    ),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.BrokenImage, contentDescription = null, tint = TextMuted, modifier = Modifier.size(32.dp))
+                                Text("No se pudo cargar la imagen", color = TextMuted, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                )
+            } else if (proof.receiptImageRes != 0) {
+                Image(
+                    painter = painterResource(id = proof.receiptImageRes),
+                    contentDescription = "Capture de Pago Móvil",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        ),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+
+        // Quick Zoom Controls Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Pellizca para zoom (${String.format(Locale.US, "%.1fx", scale)})",
+                color = TextMuted,
+                fontSize = 10.sp
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Zoom Out
+                IconButton(
+                    onClick = {
+                        scale = (scale - 0.5f).coerceAtLeast(1f)
+                        if (scale == 1f) offset = Offset.Zero
+                    },
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(DarkCardElevated)
+                ) {
+                    Icon(imageVector = Icons.Default.Remove, contentDescription = "Alejar", tint = TextSecondary, modifier = Modifier.size(13.dp))
+                }
+
+                // Reset
+                if (scale > 1f || offset != Offset.Zero) {
+                    TextButton(
+                        onClick = {
+                            scale = 1f
+                            offset = Offset.Zero
+                        },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        modifier = Modifier.height(26.dp)
+                    ) {
+                        Text("1.0x", color = GoldPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // Zoom In
+                IconButton(
+                    onClick = {
+                        scale = (scale + 0.5f).coerceAtMost(4f)
+                    },
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(DarkCardElevated)
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Acercar", tint = TextSecondary, modifier = Modifier.size(13.dp))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * FULLSCREEN LIGHTBOX MODAL
+ * Dedicated inspection modal allowing high-zoom validation of reference number, issuing bank, date & amount.
+ */
+@Composable
+fun FullscreenReceiptLightboxDialog(
+    order: Order,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val proof = order.paymentProof
+    var scale by remember { mutableFloatStateOf(1.2f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+
+    val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
+        scale = (scale * zoomChange).coerceIn(1f, 5f)
+        if (scale > 1f) {
+            offset += offsetChange
+        } else {
+            offset = Offset.Zero
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.96f))
+        ) {
+            // Top Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Comprobante #${order.orderNumber}",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Ref: •••• ${proof.referenceDigits.ifBlank { "4892" }} • $${String.format(Locale.US, "%.2f", order.total)} USD",
+                        color = GoldPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(DarkCardElevated)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cerrar",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Interactive Fullscreen Image
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 80.dp)
+                    .transformable(state = transformState),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!proof.receiptImageUrl.isNullOrBlank()) {
+                    SubcomposeAsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(proof.receiptImageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Capture Completo",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offset.x,
+                                translationY = offset.y
+                            ),
+                        contentScale = ContentScale.Fit,
+                        loading = {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = GoldPrimary, modifier = Modifier.size(36.dp))
+                            }
+                        },
+                        error = {
+                            if (proof.receiptImageRes != 0) {
+                                Image(
+                                    painter = painterResource(id = proof.receiptImageRes),
+                                    contentDescription = "Capture Completo",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer(
+                                            scaleX = scale,
+                                            scaleY = scale,
+                                            translationX = offset.x,
+                                            translationY = offset.y
+                                        ),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+                        }
+                    )
+                } else if (proof.receiptImageRes != 0) {
+                    Image(
+                        painter = painterResource(id = proof.receiptImageRes),
+                        contentDescription = "Capture Completo",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offset.x,
+                                translationY = offset.y
+                            ),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+
+            // Bottom Quick Controls Bar
+            Surface(
+                color = DarkSurface.copy(alpha = 0.9f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Zoom: ${String.format(Locale.US, "%.1fx", scale)}",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = {
+                                scale = (scale - 0.5f).coerceAtLeast(1f)
+                                if (scale == 1f) offset = Offset.Zero
+                            },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(DarkCard)
+                        ) {
+                            Icon(imageVector = Icons.Default.Remove, contentDescription = "Alejar", tint = Color.White, modifier = Modifier.size(16.dp))
+                        }
+
+                        Button(
+                            onClick = {
+                                scale = 1f
+                                offset = Offset.Zero
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = DarkCardElevated, contentColor = GoldPrimary),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("Restablecer", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        IconButton(
+                            onClick = {
+                                scale = (scale + 0.5f).coerceAtMost(5f)
+                            },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(DarkCard)
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = "Acercar", tint = Color.White, modifier = Modifier.size(16.dp))
+                        }
+                    }
                 }
             }
         }

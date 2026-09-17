@@ -1,74 +1,99 @@
 package com.example.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Isaya Sushi Luxury Palette: Deep Black, Imperial Gold, Crimson Red
-val DeepBlack = Color(0xFF0D0D0D)
-val DarkSurface = Color(0xFF141414)
-val DarkCard = Color(0xFF1C1C1E)
-val DarkCardElevated = Color(0xFF252528)
-val DarkBorder = Color(0xFF2C2C2E)
-
-// Gold Accents
-val GoldPrimary = Color(0xFFD4AF37)
-val GoldLight = Color(0xFFF3E5AB)
-val GoldDark = Color(0xFF997D1E)
-val GoldContainer = Color(0xFF2A230B)
-
-// Crimson Sushi Red
-val SushiRed = Color(0xFFC8102E)
-val SushiRedLight = Color(0xFFFF4D6D)
-val SushiRedDark = Color(0xFF8A0017)
-val SushiRedContainer = Color(0xFF38070E)
-
-// Status Colors
-val StatusGreen = Color(0xFF2ED573)
-val SuccessGreen = StatusGreen
-val StatusGreenContainer = Color(0xFF0B2917)
-val StatusOrange = Color(0xFFFFA502)
-val StatusBlue = Color(0xFF1E90FF)
+// Isaya Sushi Vibrant Luxury Palette (Lively Japanese Slate, Crimson, Imperial Gold & Emerald)
+val DeepBlack = Color(0xFF10131A) // Rich deep midnight obsidian (not dull pitch black)
+val DarkSurface = Color(0xFF161A26) // Deep navy slate surface
+val DarkCard = Color(0xFF1E2333) // Vibrant dark card background
+val DarkCardElevated = Color(0xFF282E44) // Luminous elevated card
+val DarkBorder = Color(0xFF3B4460) // High-contrast subtle border
 val DarkCardBorder = DarkBorder
 
-// Neutrals
-val TextPrimary = Color(0xFFF5F5F7)
-val TextSecondary = Color(0xFFA0A0A5)
-val TextMuted = Color(0xFF6E6E73)
+// Radiant Gold Accents
+val GoldPrimary = Color(0xFFFFC72C) // Radiant Vibrant Sun Gold
+val GoldLight = Color(0xFFFFF1BD) // Soft luminous gold
+val GoldDark = Color(0xFFB8860B) // Rich deep gold
+val GoldContainer = Color(0xFF382D0F) // Warm gold container
+
+// Radiant Crimson Sushi Red
+val SushiRed = Color(0xFFFF2A4D) // Bright vibrant Crimson Coral
+val SushiRedLight = Color(0xFFFF6B85) // Energetic lively pink-red
+val SushiRedDark = Color(0xFFB30C28) // Deep royal crimson
+val SushiRedContainer = Color(0xFF4D101C) // Rich crimson container
+
+// Status Colors - Ultra Vivid & High Contrast
+val StatusGreen = Color(0xFF00E676) // Radiant lively emerald
+val SuccessGreen = StatusGreen
+val StatusGreenContainer = Color(0xFF0F3D24)
+val StatusOrange = Color(0xFFFF9500) // Electric amber orange
+val StatusOrangeContainer = Color(0xFF472800)
+val StatusBlue = Color(0xFF00B4D8) // Radiant electric cyan azure
+val StatusBlueContainer = Color(0xFF072D42)
+val StatusPurple = Color(0xFFA855F7) // Vibrant royal violet
+
+// Vivid Neutrals & Typography
+val TextPrimary = Color(0xFFFFFFFF) // Crisp bright white
+val TextSecondary = Color(0xFFCBD5E1) // Crisp silver slate
+val TextMuted = Color(0xFF94A3B8) // Clear legible slate
+
+// Vivid Multi-Color Gradients
+val GradientGoldCrimson = Brush.horizontalGradient(
+    listOf(GoldPrimary, SushiRed)
+)
+val GradientSushiHeader = Brush.linearGradient(
+    listOf(Color(0xFF2A1520), Color(0xFF161A26), Color(0xFF1B2335))
+)
+val GradientKitchenActive = Brush.horizontalGradient(
+    listOf(SushiRed, Color(0xFFFF6B4A))
+)
+val GradientDispatched = Brush.horizontalGradient(
+    listOf(Color(0xFF00B4D8), StatusGreen)
+)
+val GradientGoldBanner = Brush.horizontalGradient(
+    listOf(GoldDark, GoldPrimary, GoldLight)
+)
+val GradientCardSubtle = Brush.verticalGradient(
+    listOf(Color(0xFF242A3E), Color(0xFF1A1F2E))
+)
 
 // --- iOS Clean Light Theme Palette (App Clientes) ---
-val IosLightBg = Color(0xFFF6F7F9)
+val IosLightBg = Color(0xFFF8F9FB)
 val IosLightSurface = Color(0xFFFFFFFF)
 val IosLightCard = Color(0xFFFFFFFF)
-val IosLightCardSecondary = Color(0xFFF0F2F5)
-val IosLightBorder = Color(0xFFE5E8EB)
-val IosLightBorderSubtle = Color(0xFFECEFF2)
+val IosLightCardSecondary = Color(0xFFF0F3F8)
+val IosLightBorder = Color(0xFFE2E8F0)
+val IosLightBorderSubtle = Color(0xFFEDF2F7)
 
-val IosTextPrimary = Color(0xFF111827)
-val IosTextSecondary = Color(0xFF4B5563)
-val IosTextMuted = Color(0xFF9CA3AF)
+val IosTextPrimary = Color(0xFF0F172A)
+val IosTextSecondary = Color(0xFF334155)
+val IosTextMuted = Color(0xFF64748B)
 
-val IosGoldPrimary = Color(0xFFC59B27)
-val IosGoldLight = Color(0xFF8C6D14)
-val IosGoldContainer = Color(0xFFFEF9E7)
-val IosGoldBorder = Color(0xFFF0DC9B)
+val IosGoldPrimary = Color(0xFFD97706)
+val IosGoldLight = Color(0xFF92400E)
+val IosGoldContainer = Color(0xFFFEF3C7)
+val IosGoldBorder = Color(0xFFFDE68A)
 
-val IosRedPrimary = Color(0xFFC8102E)
-val IosRedLight = Color(0xFFB00D27)
-val IosRedContainer = Color(0xFFFFEEF0)
-val IosRedBorder = Color(0xFFFFCCD3)
+val IosRedPrimary = Color(0xFFEF4444)
+val IosRedLight = Color(0xFFDC2626)
+val IosRedContainer = Color(0xFFFEE2E2)
+val IosRedBorder = Color(0xFFFECACA)
 
 val IosGreenPrimary = Color(0xFF10B981)
-val IosGreenContainer = Color(0xFFECFDF5)
+val IosGreenContainer = Color(0xFFD1FAE5)
 val IosGreenBorder = Color(0xFFA7F3D0)
 
-val IosInputBackground = Color(0xFFF3F4F6)
-val IosInputBorder = Color(0xFFE5E7EB)
-val IosInputFocusedBorder = Color(0xFFC59B27)
+val IosInputBackground = Color(0xFFF1F5F9)
+val IosInputBorder = Color(0xFFCBD5E1)
+val IosInputFocusedBorder = Color(0xFFD97706)
 
 // Dark Theme Map Palette for GPS Selector
-val IosDarkMapBg = Color(0xFF0D1117)
-val IosDarkMapSurface = Color(0xFF161B22)
-val IosDarkMapCard = Color(0xFF21262D)
-val IosDarkMapBorder = Color(0xFF30363D)
+val IosDarkMapBg = Color(0xFF10131A)
+val IosDarkMapSurface = Color(0xFF1A1F2D)
+val IosDarkMapCard = Color(0xFF252C3E)
+val IosDarkMapBorder = Color(0xFF3B4460)
+
 
 
 

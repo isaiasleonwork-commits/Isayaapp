@@ -1,5 +1,6 @@
 package com.example.ui.partner
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -16,8 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,17 +29,17 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PartnerAuthLoginScreen(
     onLoginSubmit: (email: String, password: String, onResult: (Boolean, String?) -> Unit) -> Unit,
-    onSwitchToClient: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var email by remember { mutableStateOf("randerleon@gmail.com") }
-    var password by remember { mutableStateOf("Isaias.2511") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -46,6 +49,8 @@ fun PartnerAuthLoginScreen(
         modifier = modifier
             .fillMaxSize()
             .background(DeepBlack)
+            .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -53,25 +58,27 @@ fun PartnerAuthLoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(DarkSurface)
-                .border(1.dp, GoldPrimary.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
+                .background(GradientSushiHeader)
+                .border(1.5.dp, GoldPrimary.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header with Chef & Torii Icon
+            // Official Circular Logo of Isaya Sushi
             Box(
                 modifier = Modifier
-                    .size(68.dp)
+                    .size(96.dp)
                     .clip(CircleShape)
-                    .background(SushiRed.copy(alpha = 0.18f))
-                    .border(1.5.dp, GoldPrimary, CircleShape),
+                    .border(2.5.dp, GoldPrimary, CircleShape)
+                    .background(DeepBlack),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.OutdoorGrill,
-                    contentDescription = "Cocina Isaya",
-                    tint = GoldPrimary,
-                    modifier = Modifier.size(36.dp)
+                Image(
+                    painter = painterResource(id = R.drawable.img_isaya_logo),
+                    contentDescription = "Logo Oficial Isaya Sushi",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
             }
 
@@ -90,7 +97,7 @@ fun PartnerAuthLoginScreen(
                 color = TextSecondary,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 18.dp)
             )
 
             // Firebase Auth Badge
@@ -117,7 +124,7 @@ fun PartnerAuthLoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Error Banner
             errorMessage?.let { msg ->
@@ -155,6 +162,7 @@ fun PartnerAuthLoginScreen(
                     email = it
                     errorMessage = null
                 },
+                placeholder = { Text("ejemplo@isayasushi.com", color = TextMuted, fontSize = 12.sp) },
                 label = { Text("Correo del Personal", color = TextSecondary, fontSize = 12.sp) },
                 leadingIcon = {
                     Icon(
@@ -297,61 +305,7 @@ fun PartnerAuthLoginScreen(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Quick Direct Credentials Button for Unique Partner
-            OutlinedButton(
-                onClick = {
-                    email = "randerleon@gmail.com"
-                    password = "Isaias.2511"
-                    isLoading = true
-                    errorMessage = null
-                    onLoginSubmit("randerleon@gmail.com", "Isaias.2511") { success, error ->
-                        isLoading = false
-                        if (!success) {
-                            errorMessage = error
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = GoldPrimary),
-                border = androidx.compose.foundation.BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.5f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(46.dp)
-                    .testTag("partner_demo_login_button")
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Key,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = GoldPrimary
-                    )
-                    Text(
-                        text = "Acceso Rápido • Rander León (Partner)",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            TextButton(
-                onClick = onSwitchToClient,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "🍣 Cambiar a Vista Clientes",
-                    color = TextSecondary,
-                    fontSize = 12.sp
-                )
-            }
         }
     }
 }
+
